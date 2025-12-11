@@ -448,17 +448,22 @@ class ThemedStyle:
 
     def __init__(self) -> None:
         self.colors = {
-            "bg": "#0f172a",
-            "panel": "#1e293b",
+            "bg": "#0b1224",
+            "panel": "#111827",
+            "panel_alt": "#0f172a",
             "accent": "#22c55e",
-            "text": "#e2e8f0",
-            "muted": "#94a3b8",
+            "accent_glow": "#34d399",
+            "text": "#e5e7eb",
+            "muted": "#9ca3af",
             "warning": "#f59e0b",
             "danger": "#ef4444",
+            "tile": "#0f172a",
+            "tile_hover": "#1f2937",
+            "border": "#1f2937",
         }
         self.fonts = {
-            "title": ("Helvetica", 20, "bold"),
-            "subtitle": ("Helvetica", 14, "bold"),
+            "title": ("Helvetica", 22, "bold"),
+            "subtitle": ("Helvetica", 15, "bold"),
             "body": ("Helvetica", 11),
             "button": ("Helvetica", 12, "bold"),
         }
@@ -491,63 +496,83 @@ class GameToolbar(tk.Frame):
     """Toolbar containing control buttons for the game."""
 
     def __init__(self, master: tk.Widget, theme: ThemedStyle, emitter: EventEmitter):
-        super().__init__(master, bg=theme.colors["panel"], bd=2, relief=tk.RIDGE)
+        super().__init__(master, bg=theme.colors["panel"], bd=0, relief=tk.FLAT)
         self.theme = theme
         self.emitter = emitter
         self._build()
 
     def _build(self) -> None:
-        btn_new = tk.Button(
+        frame = tk.Frame(
             self,
-            text="New Game",
-            command=lambda: self.emitter.emit("new_game"),
-            bg=self.theme.colors["accent"],
-            fg="black",
-            font=self.theme.fonts["button"],
-        )
-        btn_new.pack(side=tk.LEFT, padx=6, pady=6)
-
-        btn_reset = tk.Button(
-            self,
-            text="Reset Scores",
-            command=lambda: self.emitter.emit("reset_scores"),
-            bg=self.theme.colors["warning"],
-            fg="black",
-            font=self.theme.fonts["button"],
-        )
-        btn_reset.pack(side=tk.LEFT, padx=6, pady=6)
-
-        btn_undo = tk.Button(
-            self,
-            text="Undo Move",
-            command=lambda: self.emitter.emit("undo_move"),
             bg=self.theme.colors["panel"],
-            fg=self.theme.colors["text"],
-            font=self.theme.fonts["button"],
+            highlightbackground=self.theme.colors["border"],
+            highlightthickness=1,
         )
-        btn_undo.pack(side=tk.LEFT, padx=6, pady=6)
+        frame.pack(fill=tk.X, padx=4, pady=4)
+
+        buttons = [
+            ("New Game", self.theme.colors["accent"], lambda: self.emitter.emit("new_game")),
+            ("Reset Scores", self.theme.colors["warning"], lambda: self.emitter.emit("reset_scores")),
+            ("Undo Move", self.theme.colors["panel_alt"], lambda: self.emitter.emit("undo_move")),
+        ]
+
+        for text, color, command in buttons:
+            btn = tk.Button(
+                frame,
+                text=text,
+                command=command,
+                bg=color,
+                fg="black" if color != self.theme.colors["panel_alt"] else self.theme.colors["text"],
+                font=self.theme.fonts["button"],
+                relief=tk.FLAT,
+                padx=14,
+                pady=8,
+                activebackground=self.theme.colors["accent_glow"],
+            )
+            btn.pack(side=tk.LEFT, padx=6, pady=6)
+            btn.bind("<Enter>", lambda e, b=btn: b.configure(bg=self.theme.colors["accent_glow"]))
+            btn.bind("<Leave>", lambda e, b=btn, c=color: b.configure(bg=c))
 
         btn_quit = tk.Button(
-            self,
+            frame,
             text="Quit",
             command=lambda: self.emitter.emit("quit"),
             bg=self.theme.colors["danger"],
             fg="black",
             font=self.theme.fonts["button"],
+            relief=tk.FLAT,
+            padx=14,
+            pady=8,
+            activebackground="#f87171",
         )
         btn_quit.pack(side=tk.RIGHT, padx=6, pady=6)
+        btn_quit.bind("<Enter>", lambda e, b=btn_quit: b.configure(bg="#f87171"))
+        btn_quit.bind("<Leave>", lambda e, b=btn_quit: b.configure(bg=self.theme.colors["danger"]))
 
 
 class ScorePanel(tk.Frame):
     """Displays the running tally of wins and draws."""
 
     def __init__(self, master: tk.Widget, theme: ThemedStyle) -> None:
-        super().__init__(master, bg=theme.colors["panel"], bd=2, relief=tk.RIDGE)
+        super().__init__(
+            master,
+            bg=theme.colors["panel"],
+            bd=0,
+            relief=tk.FLAT,
+            highlightbackground=theme.colors["border"],
+            highlightthickness=1,
+        )
         self.theme = theme
         self._build()
 
     def _build(self) -> None:
-        self.title = tk.Label(self, text="Scoreboard", bg=self.theme.colors["panel"], fg=self.theme.colors["text"], font=self.theme.fonts["subtitle"])
+        self.title = tk.Label(
+            self,
+            text="Scoreboard",
+            bg=self.theme.colors["panel"],
+            fg=self.theme.colors["text"],
+            font=self.theme.fonts["subtitle"],
+        )
         self.title.pack(padx=6, pady=(6, 0))
 
         self.human_label = tk.Label(self, text="Human: 0", bg=self.theme.colors["panel"], fg=self.theme.colors["text"], font=self.theme.fonts["body"])
@@ -569,7 +594,14 @@ class HistoryPanel(tk.Frame):
     """Displays move history in a scrolling list."""
 
     def __init__(self, master: tk.Widget, theme: ThemedStyle):
-        super().__init__(master, bg=theme.colors["panel"], bd=2, relief=tk.RIDGE)
+        super().__init__(
+            master,
+            bg=theme.colors["panel"],
+            bd=0,
+            relief=tk.FLAT,
+            highlightbackground=theme.colors["border"],
+            highlightthickness=1,
+        )
         self.theme = theme
         self._build()
 
@@ -606,9 +638,22 @@ class StatusBar(tk.Frame):
     """Shows informational messages to the user."""
 
     def __init__(self, master: tk.Widget, theme: ThemedStyle) -> None:
-        super().__init__(master, bg=theme.colors["panel"], bd=2, relief=tk.SUNKEN)
+        super().__init__(
+            master,
+            bg=theme.colors["panel"],
+            bd=0,
+            relief=tk.FLAT,
+            highlightbackground=theme.colors["border"],
+            highlightthickness=1,
+        )
         self.theme = theme
-        self.label = tk.Label(self, text="Welcome to Tic Tac Toe!", bg=theme.colors["panel"], fg=theme.colors["text"], font=theme.fonts["body"])
+        self.label = tk.Label(
+            self,
+            text="Welcome to Tic Tac Toe!",
+            bg=theme.colors["panel"],
+            fg=theme.colors["text"],
+            font=theme.fonts["body"],
+        )
         self.label.pack(fill=tk.BOTH, expand=True, padx=6, pady=2)
 
     def set(self, message: StatusMessage) -> None:
@@ -619,10 +664,18 @@ class BoardView(tk.Frame):
     """Visual representation of the board using clickable buttons."""
 
     def __init__(self, master: tk.Widget, theme: ThemedStyle, emitter: EventEmitter):
-        super().__init__(master, bg=theme.colors["panel"], bd=2, relief=tk.RIDGE)
+        super().__init__(
+            master,
+            bg=theme.colors["panel"],
+            bd=0,
+            relief=tk.FLAT,
+            highlightbackground=theme.colors["border"],
+            highlightthickness=1,
+        )
         self.theme = theme
         self.emitter = emitter
         self.buttons: List[List[tk.Button]] = []
+        self._animations: Dict[tk.Button, str] = {}
         self._build()
 
     def _build(self) -> None:
@@ -634,12 +687,19 @@ class BoardView(tk.Frame):
                     text="",
                     width=5,
                     height=2,
-                    font=("Helvetica", 24, "bold"),
-                    bg=self.theme.colors["bg"],
-                    fg=self.theme.colors["accent"],
+                    font=("Helvetica", 26, "bold"),
+                    bg=self.theme.colors["tile"],
+                    fg=self.theme.colors["text"],
+                    activebackground=self.theme.colors["accent_glow"],
+                    activeforeground="black",
+                    relief=tk.FLAT,
+                    borderwidth=0,
+                    highlightthickness=0,
                     command=lambda rr=r, cc=c: self.emitter.emit("cell_clicked", rr, cc),
                 )
                 btn.grid(row=r, column=c, padx=6, pady=6, sticky="nsew")
+                btn.bind("<Enter>", lambda e, b=btn: self._hover(b, True))
+                btn.bind("<Leave>", lambda e, b=btn: self._hover(b, False))
                 row_buttons.append(btn)
             self.buttons.append(row_buttons)
 
@@ -647,12 +707,21 @@ class BoardView(tk.Frame):
             self.columnconfigure(i, weight=1)
             self.rowconfigure(i, weight=1)
 
-    def render(self, board: Board) -> None:
+    def render(self, board: Board, last_move: Optional[Tuple[int, int]] = None) -> None:
         for r in range(3):
             for c in range(3):
                 value = board.cells[r][c]
                 color = self.theme.colors["accent"] if value == "X" else self.theme.colors["warning"]
-                self.buttons[r][c].configure(text=value, fg=color if value else self.theme.colors["text"])
+                bg = self.theme.colors["tile_hover"] if value else self.theme.colors["tile"]
+                self.buttons[r][c].configure(
+                    text=value,
+                    fg=color if value else self.theme.colors["text"],
+                    bg=bg,
+                )
+
+        if last_move is not None:
+            lr, lc = last_move
+            self._animate_pulse(self.buttons[lr][lc])
 
     def highlight_winner(self, board: Board) -> None:
         winner = board.winner()
@@ -660,7 +729,7 @@ class BoardView(tk.Frame):
             return
         winning_positions = self._winning_positions(board, winner)
         for r, c in winning_positions:
-            self.buttons[r][c].configure(bg="#334155")
+            self.buttons[r][c].configure(bg=self.theme.colors["accent_glow"], fg="black")
 
     @staticmethod
     def _winning_positions(board: Board, player: str) -> List[Tuple[int, int]]:
@@ -678,12 +747,39 @@ class BoardView(tk.Frame):
                     positions.extend(coords)
         return positions
 
+    def _hover(self, button: tk.Button, active: bool) -> None:
+        if button["text"]:
+            return
+        button.configure(bg=self.theme.colors["tile_hover"] if active else self.theme.colors["tile"])
+
+    def _animate_pulse(self, button: tk.Button) -> None:
+        for existing in list(self._animations.values()):
+            self.after_cancel(existing)
+        sequence = [self.theme.colors["accent_glow"], self.theme.colors["tile_hover"]]
+
+        def pulse(step: int = 0) -> None:
+            color = sequence[step % len(sequence)]
+            button.configure(bg=color)
+            if step < 5:
+                self._animations[button] = self.after(140, pulse, step + 1)
+            else:
+                button.configure(bg=self.theme.colors["tile_hover"] if button["text"] else self.theme.colors["tile"])
+
+        pulse()
+
 
 class SettingsPanel(tk.Frame):
     """Displays controls for AI difficulty and starting player."""
 
     def __init__(self, master: tk.Widget, theme: ThemedStyle, emitter: EventEmitter) -> None:
-        super().__init__(master, bg=theme.colors["panel"], bd=2, relief=tk.RIDGE)
+        super().__init__(
+            master,
+            bg=theme.colors["panel"],
+            bd=0,
+            relief=tk.FLAT,
+            highlightbackground=theme.colors["border"],
+            highlightthickness=1,
+        )
         self.theme = theme
         self.emitter = emitter
         self.difficulty = tk.StringVar(value="Optimal")
@@ -691,10 +787,23 @@ class SettingsPanel(tk.Frame):
         self._build()
 
     def _build(self) -> None:
-        label = tk.Label(self, text="Settings", bg=self.theme.colors["panel"], fg=self.theme.colors["text"], font=self.theme.fonts["subtitle"])
+        label = tk.Label(
+            self,
+            text="Settings",
+            bg=self.theme.colors["panel"],
+            fg=self.theme.colors["text"],
+            font=self.theme.fonts["subtitle"],
+        )
         label.pack(padx=6, pady=(6, 0))
 
-        diff_frame = tk.LabelFrame(self, text="AI Difficulty", bg=self.theme.colors["panel"], fg=self.theme.colors["text"], bd=1)
+        diff_frame = tk.LabelFrame(
+            self,
+            text="AI Difficulty",
+            bg=self.theme.colors["panel"],
+            fg=self.theme.colors["text"],
+            bd=1,
+            highlightbackground=self.theme.colors["border"],
+        )
         diff_frame.pack(padx=6, pady=6, fill=tk.X)
 
         for name in ["Random", "Heuristic", "Optimal"]:
@@ -710,7 +819,14 @@ class SettingsPanel(tk.Frame):
             )
             rb.pack(anchor="w", padx=4, pady=2)
 
-        start_frame = tk.LabelFrame(self, text="Starting Player", bg=self.theme.colors["panel"], fg=self.theme.colors["text"], bd=1)
+        start_frame = tk.LabelFrame(
+            self,
+            text="Starting Player",
+            bg=self.theme.colors["panel"],
+            fg=self.theme.colors["text"],
+            bd=1,
+            highlightbackground=self.theme.colors["border"],
+        )
         start_frame.pack(padx=6, pady=6, fill=tk.X)
 
         for name in ["X", "O"]:
@@ -740,7 +856,14 @@ class InstructionsPanel(tk.Frame):
     """Displays a textual help guide for the player."""
 
     def __init__(self, master: tk.Widget, theme: ThemedStyle) -> None:
-        super().__init__(master, bg=theme.colors["panel"], bd=2, relief=tk.RIDGE)
+        super().__init__(
+            master,
+            bg=theme.colors["panel"],
+            bd=0,
+            relief=tk.FLAT,
+            highlightbackground=theme.colors["border"],
+            highlightthickness=1,
+        )
         self.theme = theme
         self._build()
 
@@ -817,11 +940,30 @@ class TicTacToeApp:
         self._maybe_ai_move_after_start()
 
     def _build_layout(self) -> None:
+        header = tk.Frame(self.root, bg=self.theme.colors["bg"])
+        header.pack(fill=tk.X, padx=12, pady=(12, 4))
+        title = tk.Label(
+            header,
+            text="Tic Tac Toe Deluxe",
+            font=self.theme.fonts["title"],
+            bg=self.theme.colors["bg"],
+            fg=self.theme.colors["text"],
+        )
+        title.pack(anchor="w")
+        subtitle = tk.Label(
+            header,
+            text="A modern board with glowing moves and smooth feedback",
+            font=self.theme.fonts["body"],
+            bg=self.theme.colors["bg"],
+            fg=self.theme.colors["muted"],
+        )
+        subtitle.pack(anchor="w", pady=(2, 0))
+
         self.toolbar = GameToolbar(self.root, self.theme, self.emitter)
-        self.toolbar.pack(fill=tk.X, padx=8, pady=8)
+        self.toolbar.pack(fill=tk.X, padx=12, pady=8)
 
         container = tk.Frame(self.root, bg=self.theme.colors["bg"])
-        container.pack(fill=tk.BOTH, expand=True)
+        container.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 12))
 
         left_column = tk.Frame(container, bg=self.theme.colors["bg"])
         left_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=8, pady=8)
@@ -932,7 +1074,8 @@ class TicTacToeApp:
         self._update_status()
 
     def _update_board_view(self, highlight: bool = False) -> None:
-        self.board_view.render(self.state.board)
+        last_move = self.state.history[-1].position if self.state.history else None
+        self.board_view.render(self.state.board, last_move=last_move)
         if highlight:
             self.board_view.highlight_winner(self.state.board)
         self.history_panel.refresh(self.state.history)
@@ -944,7 +1087,7 @@ class TicTacToeApp:
         start = starting_player or self.settings_panel.starting_player.get()
         self.state.reset(start)
         self.state.board.reset()
-        self.board_view.render(self.state.board)
+        self.board_view.render(self.state.board, last_move=None)
         self.history_panel.refresh(self.state.history)
         self.status_message = StatusMessage(
             f"New game started. {start} goes first.", "info"
